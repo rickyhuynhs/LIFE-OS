@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>This is my life</title>
+<style>
+:root{--bg:#1a1714;--panel:#24201c;--line:#3a342d;--tx:#f1ebe2;--mu:#a79d8f;--acc:#7c8a4a;--amb:#b8821f;--rust:#9a4a35;--slate:#4d6075;--olive:#5d6b3a}
+@media (prefers-color-scheme:light){:root{--bg:#f4efe7;--panel:#fffaf1;--line:#ddd2c2;--tx:#2a241d;--mu:#7a6f61}}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+main{max-width:920px;margin:0 auto;padding:26px 16px 70px}
+h1{font-size:clamp(32px,8vw,52px);letter-spacing:-.03em;margin:0;font-weight:800}
+.sub{color:var(--mu);margin:4px 0 16px;font-size:14px}
+nav{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:18px}
+nav a{padding:8px 14px;border:1px solid var(--line);border-radius:99px;color:var(--mu);text-decoration:none;font-size:14px;white-space:nowrap}
+nav a.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--amb);outline-offset:2px}
+h2{font-size:15px;font-weight:600;color:var(--mu);margin:22px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.tile{color:#fff;border-radius:18px;padding:16px}.tile small{display:block;font-size:13px;opacity:.85}.tile b{display:block;font-size:32px;letter-spacing:-.02em;margin:4px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+label.f{display:block;font-size:12px;color:var(--mu)}
+input,select,textarea,button{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%}
+textarea{min-height:70px;resize:vertical}
+input[type=range]{padding:0;accent-color:var(--acc)}
+input[type=checkbox]{width:auto;accent-color:var(--acc)}
+button{width:auto;cursor:pointer}
+button.p{background:var(--tx);color:var(--bg);border-color:var(--tx);font-weight:600}
+button.x{color:#e0866c}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}
+.empty{color:var(--mu);font-size:14px;padding:8px 2px}
+.bar{height:8px;border-radius:8px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}
+.dots{display:flex;gap:4px}.dots span{width:10px;height:10px;border-radius:50%;background:var(--line)}.dots span.y{background:var(--acc)}
+.hab{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}.hab:first-of-type{border-top:0}.hab .n{flex:1}
+.tools{margin-top:30px;display:flex;gap:8px;flex-wrap:wrap}
+.up{color:#9cc36a}.dn{color:#e0866c}
+.chk:checked+b{text-decoration:line-through;color:var(--mu)}
+</style>
+</head>
+<body>
+<main>
+<h1 id="greet">Hello.</h1>
+<p class="sub" id="date"></p>
+<nav id="tabs" aria-label="Sections"></nav>
+<div id="view"></div>
+<div class="tools">
+ <button id="exp">Export backup</button>
+ <button id="imp">Import backup</button>
+ <button id="rst" class="x">Reset everything</button>
+ <input type="file" id="file" accept="application/json" hidden>
+</div>
+</main>
+<script>
+(function(){
+var PRI=["High","Medium","Low"],ST=["Not started","In progress","Done"];
+var C={
+ tasks:{t:"Tasks",add:"Add task",e:"No tasks yet. Add your first one above.",f:[["name","Task","text"],["status","Status",ST],["priority","Priority",PRI],["due","Due","date"]]},
+ projects:{t:"Projects",add:"Add project",e:"No projects yet.",f:[["name","Project","text"],["status","Status",ST],["start","Start","date"],["end","End","date"]]},
+ content:{t:"Content",add:"Add content",e:"No content ideas yet.",f:[["name","Title","text"],["status","Stage",["Idea","Drafting","Filming","Editing","Ready for review","In review","Approved for publishing","Scheduled","Published","On hold"]],["type","Format",["Long form","Short form","Social post"]],["platform","Platform",["YouTube","TikTok","Instagram","LinkedIn","Email","Client"]],["film","Film date","date"],["pub","Publish date","date"]]},
+ goals:{t:"Goals",add:"Add goal",e:"No goals yet.",f:[["name","Goal","text"],["priority","Priority",["P1","P2","P3"]],["progress","Progress (%)","range"],["deadline","Deadline","date"]]},
+ finances:{t:"Finances",add:"Add transaction",e:"No transactions yet.",f:[["name","Transaction","text"],["type","Type",["Expense","Income"]],["amount","Amount","number"],["category","Category","text"],["date","Date","date"]]},
+ routine:{t:"Routine",add:"Add step",e:"No routine steps yet.",f:[["name","Step","text"],["block","Time of day",["Morning","Mid-day","Evening"]]]},
+ notes:{t:"Notes",add:"Add note",e:"No notes yet.",f:[["name","Title","text"],["body","Note","area"]]},
+ library:{t:"Library",add:"Add item",e:"Nothing saved yet. Add books, links and resources.",f:[["name","Title","text"],["kind","Kind",["Book","Article","Video","Tool"]],["status","Status",["To read","In progress","Done"]],["link","Link","url"]]},
+ vision:{t:"Vision board",add:"Add vision",e:"Nothing on the board yet.",f:[["name","What do you want?","text"],["area","Area",["Health","Money","Family","Career","Travel","Growth"]],["why","Why it matters","area"]]}
+};
+var ORDER=["home","tasks","projects","content","goals","habits","routine","finances","notes","library","vision"];
+var S={};
+try{S=JSON.parse(localStorage.getItem("lifeos")||"{}")}catch(e){S={}}
+Object.keys(C).forEach(function(k){if(!Array.isArray(S[k]))S[k]=[]});
+if(!Array.isArray(S.habits))S.habits=[];
+function save(){try{localStorage.setItem("lifeos",JSON.stringify(S))}catch(e){}}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function $(i){return document.getElementById(i)}
+function today(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function ago(n){var d=new Date();d.setDate(d.getDate()-n);return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function money(n){return(n<0?"−":"")+"$"+Math.abs(Math.round(n*100)/100).toLocaleString("en-US")}
+function inp(f,v,at){var k=f[2],a=at||"";
+ if(Array.isArray(k))return"<select "+a+">"+k.map(function(o){return"<option"+(o==v?" selected":"")+">"+esc(o)+"</option>"}).join("")+"</select>";
+ if(k=="area")return"<textarea "+a+">"+esc(v)+"</textarea>";
+ if(k=="range")return'<input type="range" min="0" max="100" value="'+(v||0)+'" '+a+'><div class="bar"><i style="width:'+(v||0)+'%"></i></div><small>'+(v||0)+"%</small>";
+ return'<input type="'+k+'" value="'+esc(v)+'" '+a+(k=="number"?' step="any" inputmode="decimal"':"")+">"}
+function form(key){var c=C[key];
+ return'<div class="card"><div class="fields">'+c.f.map(function(f,j){return'<label class="f">'+f[1]+inp(f,f[2]=="range"?0:(f[2]=="date"&&f[0]=="date"?today():""),'data-new="'+j+'"')+"</label>"}).join("")+'</div><div class="row"><span></span><button class="p" data-add="'+key+'">'+c.add+"</button></div></div>"}
+function list(key){var c=C[key],a=S[key];
+ if(!a.length)return'<div class="empty">'+c.e+"</div>";
+ return a.map(function(it,i){return'<div class="card"><div class="fields">'+c.f.map(function(f,j){return'<label class="f">'+f[1]+inp(f,it[f[0]],'data-k="'+key+'" data-i="'+i+'" data-f="'+f[0]+'"')+"</label>"}).join("")+'</div><div class="row"><span>'+(it.link?'<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer" style="color:var(--mu)">Open link</a>':"")+'</span><button class="x" data-del="'+key+'" data-i="'+i+'">Delete</button></div></div>'}).join("")}
+function tile(c,l,v,s){return'<div class="tile" style="background:var(--'+c+')"><small>'+l+"</small><b>"+v+"</b><small>"+s+"</small></div>"}
+function net(){var n=0;S.finances.forEach(function(t){var a=parseFloat(t.amount)||0;n+=t.type=="Income"?a:-a});return n}
+function streak(h){var n=0;while(h.log&&h.log[ago(n)])n++;return n}
+function habitsView(){
+ var h='<div class="card"><div class="fields"><label class="f">Habit<input id="hn" type="text"></label><label class="f">Time of day<select id="hb"><option>Morning</option><option>Mid-day</option><option>Evening</option></select></label></div><div class="row"><span></span><button class="p" data-addh="1">Add habit</button></div></div>';
+ if(!S.habits.length)return h+'<div class="empty">No habits yet. Add one above, then tick it off each day.</div>';
+ ["Morning","Mid-day","Evening"].forEach(function(b){var m=S.habits.map(function(x,i){return[x,i]}).filter(function(p){return p[0].block==b});
+  if(!m.length)return;
+  h+="<h2>"+b+'</h2><div class="card">'+m.map(function(p){var x=p[0],i=p[1],d="";
+   for(var n=6;n>=0;n--)d+='<span class="'+(x.log&&x.log[ago(n)]?"y":"")+'"></span>';
+   return'<div class="hab"><input type="checkbox" class="chk" data-hab="'+i+'"'+(x.log&&x.log[today()]?" checked":"")+' aria-label="Done today"><b class="n" style="font-weight:500">'+esc(x.name)+'</b><small style="color:var(--mu)">'+streak(x)+' day streak</small><div class="dots" title="Last 7 days">'+d+'</div><button class="x" data-delh="'+i+'">×</button></div>'}).join("")+"</div>"});
+ return h}
+function home(){
+ var open=S.tasks.filter(function(t){return t.status!="Done"}).length,
+  hd=S.habits.filter(function(x){return x.log&&x.log[today()]}).length,
+  gp=S.goals.length?Math.round(S.goals.reduce(function(s,g){return s+(+g.progress||0)},0)/S.goals.length):0;
+ var h='<div class="grid">'+tile("slate","Open tasks",open,S.tasks.length+" in total")+tile("amb","Active projects",S.projects.filter(function(p){return p.status=="In progress"}).length,S.projects.length+" in total")+tile("rust","Content in pipeline",S.content.filter(function(c){return c.status!="Published"}).length,"Not yet published")+tile("acc","Goal progress",gp+"%",S.goals.length+" goals")+tile("olive","Habits today",hd+"/"+S.habits.length,"Ticked off")+tile("slate","Net money",money(net()),"Income minus expenses")+"</div>";
+ var due=S.tasks.filter(function(t){return t.status!="Done"&&t.due}).sort(function(a,b){return a.due<b.due?-1:1}).slice(0,5);
+ h+="<h2>Next due</h2>"+(due.length?'<div class="card">'+due.map(function(t){return'<div class="row" style="margin:4px 0"><span>'+esc(t.name)+'</span><small class="'+(t.due<today()?"dn":"")+'">'+esc(t.due)+"</small></div>"}).join("")+"</div>":'<div class="empty">No dated tasks. Add a due date to a task to see it here.</div>');
+ var late=S.goals.filter(function(g){return g.deadline&&g.deadline<today()&&+g.progress<100});
+ if(late.length)h+="<h2>Past deadline</h2><div class=\"card\">"+late.map(function(g){return'<div class="row" style="margin:4px 0"><span>'+esc(g.name)+'</span><small class="dn">'+esc(g.deadline)+"</small></div>"}).join("")+"</div>";
+ return h}
+function fin(){var i=0,e=0;S.finances.forEach(function(t){var a=parseFloat(t.amount)||0;t.type=="Income"?i+=a:e+=a});
+ return'<div class="grid">'+tile("olive","Income",money(i),"All time")+tile("rust","Expenses",money(e),"All time")+tile("slate","Net",money(i-e),"")+"</div>"}
+function render(){
+ var t=location.hash.slice(1);if(ORDER.indexOf(t)<0)t="home";
+ $("tabs").innerHTML=ORDER.map(function(k){return'<a href="#'+k+'" class="'+(k==t?"on":"")+'">'+(k=="home"?"Home":k=="habits"?"Habits":C[k].t)+"</a>"}).join("");
+ var v=t=="home"?home():t=="habits"?habitsView():(t=="finances"?fin():"")+"<h2>"+C[t].t+"</h2>"+form(t)+list(t);
+ $("view").innerHTML=v}
+document.addEventListener("click",function(e){var b=e.target,k;
+ if(k=b.getAttribute("data-add")){var c=C[k],o={};
+  [].forEach.call(document.querySelectorAll("[data-new]"),function(el){o[c.f[+el.getAttribute("data-new")][0]]=el.value});
+  if(!o.name||!o.name.trim()){var n=document.querySelector('[data-new="0"]');if(n)n.focus();return}
+  S[k].unshift(o);save();render()}
+ else if(k=b.getAttribute("data-del")){S[k].splice(+b.getAttribute("data-i"),1);save();render()}
+ else if(b.getAttribute("data-addh")){var n=$("hn").value.trim();if(!n){$("hn").focus();return}S.habits.push({name:n,block:$("hb").value,log:{}});save();render()}
+ else if(b.getAttribute("data-delh")!==null){S.habits.splice(+b.getAttribute("data-delh"),1);save();render()}});
+document.addEventListener("change",function(e){var el=e.target,k=el.getAttribute("data-k");
+ if(k){S[k][+el.getAttribute("data-i")][el.getAttribute("data-f")]=el.value;save();if(el.type!="range"||true)render()}
+ else if(el.getAttribute("data-hab")!==null){var h=S.habits[+el.getAttribute("data-hab")];h.log=h.log||{};if(el.checked)h.log[today()]=1;else delete h.log[today()];save();render()}});
+document.addEventListener("input",function(e){var el=e.target;if(el.type=="range"&&el.getAttribute("data-k")){var bar=el.parentNode.querySelector(".bar i"),s=el.parentNode.querySelector("small");if(bar)bar.style.width=el.value+"%";if(s)s.textContent=el.value+"%"}});
+window.addEventListener("hashchange",render);
+var h=new Date().getHours();
+$("greet").textContent="Good "+(h<12?"morning":h<18?"afternoon":"evening")+".";
+$("date").textContent=new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+$("exp").onclick=function(){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:"application/json"}));a.download="life-backup.json";a.click()};
+$("imp").onclick=function(){$("file").click()};
+$("file").onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result);Object.keys(d).forEach(function(k){if(Array.isArray(d[k]))S[k]=d[k]});save();render()}catch(e){alert("That file is not a valid backup.")}};r.readAsText(f)};
+$("rst").onclick=function(){if(confirm("Delete all your data on this device? Export a backup first if you want to keep it.")){S={};Object.keys(C).forEach(function(k){S[k]=[]});S.habits=[];save();render()}};
+render();
+})();
+</script>
+</body>
+</html>
